@@ -154,7 +154,19 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
 
   private void startCamera() {
     try {
-      mCamera = Camera.open();
+      mCamera = Camera.open(); // TODO: let's try out the Camera 2 API - this method doesn't seem to work with M devices cause I'm getting a "E/Camera: Error 2" in my logs
+      mCamera.setErrorCallback(new Camera.ErrorCallback() {
+        @Override
+        public void onError(int error, Camera camera) {
+          if (error == Camera.CAMERA_ERROR_UNKNOWN) {
+            Log.e(TAG, "Camera Error: Unknown - what a great error huh...");
+          } else if (error == Camera.CAMERA_ERROR_SERVER_DIED) {
+            Log.e(TAG, "Camera Error: Server Died - am I supposed to revive it at this point?");
+          } else {
+            Log.e(TAG, "Some unknown Camera error occurred"); // should never be seen but being cautious
+          }
+        }
+      });
     } catch (RuntimeException e) {
       Log.e(TAG, "init_camera: " + e);
       return;
