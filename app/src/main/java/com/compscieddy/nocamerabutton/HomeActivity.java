@@ -55,25 +55,7 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_home);
 
-    mStartButton = (Button)findViewById(R.id.start_button);
-    mStartButton.setOnClickListener(new Button.OnClickListener() {
-      public void onClick(View v) {
-        startCamera();
-      }
-    });
-    mStopButton = (Button)findViewById(R.id.stop_button);
-    mCaptureButton = (Button) findViewById(R.id.capture_button);
-    mStopButton.setOnClickListener(new Button.OnClickListener() {
-      public void onClick(View v) {
-        stopCamera();
-      }
-    });
-    mCaptureButton.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View v) {
-        captureImage();
-      }
-    });
+    init();
 
     mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
     if (SpeechRecognizer.isRecognitionAvailable(this)) {
@@ -82,8 +64,7 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
     } else {
       Toast.makeText(this, "Speech Recognition Not Available", Toast.LENGTH_SHORT).show();
     }
-    mStartSpeechButton = (Button) findViewById(R.id.start_speech);
-    mStopSpeechButton = (Button) findViewById(R.id.stop_speech);
+
     mStartSpeechButton.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
@@ -138,6 +119,32 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
         Log.d("Log", "onPictureTaken - jpeg");
       }
     };
+
+  }
+
+  private void init() {
+    mStartSpeechButton = (Button) findViewById(R.id.start_speech);
+    mStopSpeechButton = (Button) findViewById(R.id.stop_speech);
+    mStartButton = (Button)findViewById(R.id.start_button);
+    mStopButton = (Button)findViewById(R.id.stop_button);
+    mCaptureButton = (Button) findViewById(R.id.capture_button);
+
+    mStartButton.setOnClickListener(new Button.OnClickListener() {
+      public void onClick(View v) {
+        startCamera();
+      }
+    });
+    mStopButton.setOnClickListener(new Button.OnClickListener() {
+      public void onClick(View v) {
+        stopCamera();
+      }
+    });
+    mCaptureButton.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        captureImage();
+      }
+    });
 
   }
 
@@ -269,7 +276,7 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
     @Override
     public void onError(int error) {
       Toast.makeText(HomeActivity.this, "Speech Recognition Error", Toast.LENGTH_SHORT).show();
-      startListening();
+      mSpeechRecognizer.cancel();
     }
 
     @Override
@@ -300,12 +307,12 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
   };
 
   public void startListening() {
-    mAudioManager.setStreamMute(AudioManager.STREAM_SYSTEM, true);
-    mAudioManager.setStreamMute(AudioManager.STREAM_NOTIFICATION, true);
-    mAudioManager.setStreamMute(AudioManager.STREAM_ALARM, true);
-    mAudioManager.setStreamMute(AudioManager.STREAM_MUSIC, true);
-    mAudioManager.setStreamMute(AudioManager.STREAM_RING, true);
-    mAudioManager.setStreamMute(AudioManager.STREAM_SYSTEM, true);
+//    mAudioManager.setStreamMute(AudioManager.STREAM_SYSTEM, true);
+//    mAudioManager.setStreamMute(AudioManager.STREAM_NOTIFICATION, true);
+//    mAudioManager.setStreamMute(AudioManager.STREAM_ALARM, true);
+//    mAudioManager.setStreamMute(AudioManager.STREAM_MUSIC, true);
+//    mAudioManager.setStreamMute(AudioManager.STREAM_RING, true);
+//    mAudioManager.setStreamMute(AudioManager.STREAM_SYSTEM, true);
 
     mSpeechRecognizer.startListening(new Intent());
   }
