@@ -1,13 +1,24 @@
 package com.compscieddy.nocamerabutton;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.Camera;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCaptureSession;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraDevice;
+import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraMetadata;
+import android.hardware.camera2.CaptureRequest;
 import android.media.AudioManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.speech.RecognitionListener;
 import android.speech.SpeechRecognizer;
 import android.support.v7.app.ActionBarActivity;
-import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Display;
@@ -26,18 +37,30 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 
-public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Callback {
+public class MainActivity extends ActionBarActivity implements SurfaceHolder.Callback {
 
-  private static final String TAG = HomeActivity.class.getSimpleName();
+  private static final String TAG = MainActivity.class.getSimpleName();
 
+  // OG Camera API
   Camera mCamera;
-  SurfaceView mSurfaceView;
-  SurfaceHolder mSurfaceHolder;
   Camera.PictureCallback rawCallback;
   Camera.ShutterCallback shutterCallback;
   Camera.PictureCallback jpegCallback;
+
+  // Camera 2 API
+  CameraManager mCamera2Manager;
+  private CameraDevice.StateCallback mCamera2StateCallback;
+  private final static int CAMERA_2_API_LIMIT = Build.VERSION_CODES.LOLLIPOP;
+  CameraDevice mCamera2Device;
+  CaptureRequest.Builder mCamera2CaptureRequestBuilder; // for the camera preview
+  Surface mCamera2Surface;
+  CameraCaptureSession mCamera2CaptureSession;
+
+  SurfaceView mSurfaceView;
+  SurfaceHolder mSurfaceHolder;
 
   Button mStartButton, mStopButton, mCaptureButton;
   Button mStartSpeechButton, mStopSpeechButton;
@@ -54,6 +77,28 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_home);
+
+    if (Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT) {
+      mCamera2StateCallback = new CameraDevice.StateCallback() {
+        @Override
+        public void onOpened(CameraDevice camera) {
+          Log.d(TAG, "camera callback onOpened()");
+          mCamera2Device = camera;
+          Log.e(TAG, "PREVIEW STARTED");
+          startCamera2Preview();
+        }
+
+        @Override
+        public void onDisconnected(CameraDevice camera) {
+          Log.d(TAG, "camera callback onDisconnected()");
+        }
+
+        @Override
+        public void onError(CameraDevice camera, int error) {
+          Log.d(TAG, "camera callback onError()");
+        }
+      };
+    }
 
     init();
 
@@ -82,10 +127,6 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
     // Immediately start listening as soon as the app is launched
     startListening();
 
-    mDisplayText1 = (TextView) findViewById(R.id.display_text1);
-    mDisplayText2 = (TextView) findViewById(R.id.display_text2);
-
-    mSurfaceView = (SurfaceView) findViewById(R.id.surface_view);
     mSurfaceHolder = mSurfaceView.getHolder();
     mSurfaceHolder.addCallback(this);
     mSurfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
@@ -128,10 +169,17 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
     mStartButton = (Button) findViewById(R.id.start_button);
     mStopButton = (Button) findViewById(R.id.stop_button);
     mCaptureButton = (Button) findViewById(R.id.capture_button);
+    mDisplayText1 = (TextView) findViewById(R.id.display_text1);
+    mDisplayText2 = (TextView) findViewById(R.id.display_text2);
+    mSurfaceView = (SurfaceView) findViewById(R.id.surface_view);
 
     mStartButton.setOnClickListener(new Button.OnClickListener() {
       public void onClick(View v) {
-        startCamera();
+        if (Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT) {
+          startCamera2();
+        } else {
+          startCamera();
+        }
       }
     });
     mStopButton.setOnClickListener(new Button.OnClickListener() {
@@ -188,6 +236,65 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
     }
   }
 
+  @TargetApi(CAMERA_2_API_LIMIT)
+  private void startCamera2() {
+    mCamera2Manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+    try {
+      String cameraId = mCamera2Manager.getCameraIdList()[0]; // first one should be the back camera
+      CameraCharacteristics characteristics = mCamera2Manager.getCameraCharacteristics(cameraId);
+      mCamera2Manager.openCamera(cameraId, mCamera2StateCallback, null);
+    } catch (CameraAccessException e) {
+      e.printStackTrace();
+    }
+  }
+
+  @TargetApi(CAMERA_2_API_LIMIT)
+  private void startCamera2Preview() {
+    if (mCamera2Device == null) {
+      Log.e(TAG, "mCamera2Device null");
+      return;
+    }
+
+    try {
+      mCamera2CaptureRequestBuilder = mCamera2Device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+    } catch (CameraAccessException e) {
+      e.printStackTrace();
+    }
+
+    mCamera2CaptureRequestBuilder.addTarget(mCamera2Surface);
+
+    try {
+      mCamera2Device.createCaptureSession(Arrays.asList(mCamera2Surface), new CameraCaptureSession.StateCallback() {
+        @Override
+        public void onConfigured(CameraCaptureSession session) {
+          mCamera2CaptureSession = session;
+          updateCamera2Preview();
+        }
+
+        @Override
+        public void onConfigureFailed(CameraCaptureSession session) {
+          Toast.makeText(MainActivity.this, "onConfigureFailed", Toast.LENGTH_SHORT).show();
+        }
+      }, null);
+    } catch (CameraAccessException e) {
+      e.printStackTrace();
+    }
+  }
+
+  @TargetApi(CAMERA_2_API_LIMIT)
+  private void updateCamera2Preview() {
+    mCamera2CaptureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+    HandlerThread thread = new HandlerThread("CameraPreview");
+    thread.start();
+    Handler backgroundHandler = new Handler(thread.getLooper());
+
+    try {
+      mCamera2CaptureSession.setRepeatingRequest(mCamera2CaptureRequestBuilder.build(), null, backgroundHandler);
+    } catch (CameraAccessException e) {
+      e.printStackTrace();
+    }
+  }
+
   private void stopCamera() {
     mCamera.stopPreview();
     mCamera.release();
@@ -204,31 +311,42 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
   }
 
   public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-    if (mIsPreviewRunning) {
-      mCamera.stopPreview();
+    if (!(Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT)) {
+      if (mIsPreviewRunning) {
+        mCamera.stopPreview();
+      }
+
+      Display display = ((WindowManager) getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
+
+      if (display.getRotation() == Surface.ROTATION_0) {
+        mCamera.setDisplayOrientation(90);
+      }
+
+      if (display.getRotation() == Surface.ROTATION_90) {
+      }
+
+      if (display.getRotation() == Surface.ROTATION_180) {
+      }
+
+      if (display.getRotation() == Surface.ROTATION_270) {
+        mCamera.setDisplayOrientation(180);
+      }
+
+      if (Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT) {
+        startCamera2();
+      } else {
+        startCamera();
+      }
     }
-
-    Display display = ((WindowManager) getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
-
-    if (display.getRotation() == Surface.ROTATION_0) {
-      mCamera.setDisplayOrientation(90);
-    }
-
-    if (display.getRotation() == Surface.ROTATION_90) {
-    }
-
-    if (display.getRotation() == Surface.ROTATION_180) {
-    }
-
-    if (display.getRotation() == Surface.ROTATION_270) {
-      mCamera.setDisplayOrientation(180);
-    }
-
-    startCamera();
   }
 
   public void surfaceCreated(SurfaceHolder holder) {
-    startCamera();
+    mCamera2Surface = holder.getSurface();
+    if (Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT) {
+      startCamera2();
+    } else {
+      startCamera();
+    }
   }
 
   public void surfaceDestroyed(SurfaceHolder holder) {
@@ -286,7 +404,7 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
     @Override
     public void onError(int error) {
       Log.e(TAG, "int error: " + error);
-      Toast.makeText(HomeActivity.this, "Speech Recognition Error", Toast.LENGTH_SHORT).show();
+      Toast.makeText(MainActivity.this, "Speech Recognition Error", Toast.LENGTH_SHORT).show();
       mSpeechRecognizer.cancel();
     }
 
