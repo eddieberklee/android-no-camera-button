@@ -85,7 +85,7 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
     mDisplayText1 = (TextView) findViewById(R.id.display_text1);
     mDisplayText2 = (TextView) findViewById(R.id.display_text2);
 
-    mSurfaceView = (SurfaceView)findViewById(R.id.surface_view);
+    mSurfaceView = (SurfaceView) findViewById(R.id.surface_view);
     mSurfaceHolder = mSurfaceView.getHolder();
     mSurfaceHolder.addCallback(this);
     mSurfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
@@ -125,8 +125,8 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
   private void init() {
     mStartSpeechButton = (Button) findViewById(R.id.start_speech);
     mStopSpeechButton = (Button) findViewById(R.id.stop_speech);
-    mStartButton = (Button)findViewById(R.id.start_button);
-    mStopButton = (Button)findViewById(R.id.stop_button);
+    mStartButton = (Button) findViewById(R.id.start_button);
+    mStopButton = (Button) findViewById(R.id.stop_button);
     mCaptureButton = (Button) findViewById(R.id.capture_button);
 
     mStartButton.setOnClickListener(new Button.OnClickListener() {
@@ -152,11 +152,10 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
     mCamera.takePicture(shutterCallback, rawCallback, jpegCallback);
   }
 
-  private void startCamera()
-  {
-    try{
+  private void startCamera() {
+    try {
       mCamera = Camera.open();
-    }catch(RuntimeException e){
+    } catch (RuntimeException e) {
       Log.e(TAG, "init_camera: " + e);
       return;
     }
@@ -177,8 +176,7 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
     }
   }
 
-  private void stopCamera()
-  {
+  private void stopCamera() {
     mCamera.stopPreview();
     mCamera.release();
   }
@@ -198,19 +196,19 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
       mCamera.stopPreview();
     }
 
-    Display display = ((WindowManager)getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
+    Display display = ((WindowManager) getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
 
-    if(display.getRotation() == Surface.ROTATION_0) {
+    if (display.getRotation() == Surface.ROTATION_0) {
       mCamera.setDisplayOrientation(90);
     }
 
-    if(display.getRotation() == Surface.ROTATION_90) {
+    if (display.getRotation() == Surface.ROTATION_90) {
     }
 
-    if(display.getRotation() == Surface.ROTATION_180) {
+    if (display.getRotation() == Surface.ROTATION_180) {
     }
 
-    if(display.getRotation() == Surface.ROTATION_270) {
+    if (display.getRotation() == Surface.ROTATION_270) {
       mCamera.setDisplayOrientation(180);
     }
 
@@ -260,7 +258,7 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
 
     @Override
     public void onRmsChanged(float rmsdB) {
-      mDisplayText2.setText(""+rmsdB);
+      mDisplayText2.setText("" + rmsdB);
     }
 
     @Override
@@ -275,6 +273,7 @@ public class HomeActivity extends ActionBarActivity implements SurfaceHolder.Cal
 
     @Override
     public void onError(int error) {
+      Log.e(TAG, "int error: " + error);
       Toast.makeText(HomeActivity.this, "Speech Recognition Error", Toast.LENGTH_SHORT).show();
       mSpeechRecognizer.cancel();
     }
