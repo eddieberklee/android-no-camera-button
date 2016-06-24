@@ -11,5 +11,6 @@ Could be helpful as well:
 
 
 
+Honestly just use one of these libraries. JUST GET SHIT WORKING FIRST!!! WORRY ABOUT TOTAL COMPATIBIILITY A LITTLE LATER
 
 
