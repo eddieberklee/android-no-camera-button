@@ -1,5 +1,6 @@
 package com.compscieddy.nocamerabutton;
 
+import android.Manifest;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
@@ -18,6 +19,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.speech.RecognitionListener;
 import android.speech.SpeechRecognizer;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.text.TextUtils;
 import android.util.Log;
@@ -38,6 +40,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+
+import butterknife.ButterKnife;
 
 
 public class MainActivity extends ActionBarActivity implements SurfaceHolder.Callback {
@@ -77,30 +81,11 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_home);
+    ButterKnife.bind(this);
 
-    if (Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT) {
-      mCamera2StateCallback = new CameraDevice.StateCallback() {
-        @Override
-        public void onOpened(CameraDevice camera) {
-          Log.d(TAG, "camera callback onOpened()");
-          mCamera2Device = camera;
-          Log.e(TAG, "PREVIEW STARTED");
-          startCamera2Preview();
-        }
-
-        @Override
-        public void onDisconnected(CameraDevice camera) {
-          Log.d(TAG, "camera callback onDisconnected()");
-        }
-
-        @Override
-        public void onError(CameraDevice camera, int error) {
-          Log.d(TAG, "camera callback onError()");
-        }
-      };
-    }
-
+    preInitCamera2();
     init();
+    initCameraSpeech();
 
     mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
     if (SpeechRecognizer.isRecognitionAvailable(this)) {
@@ -193,6 +178,46 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
       }
     });
 
+  }
+
+  private void initCameraSpeech() {
+    if (hasPermission(Manifest.permission.CAMERA)) {
+      startCamera2();
+    } else {
+      ActivityCompat.requestPermissions(MainActivity.this,
+          new String[] { Manifest.permission.CAMERA },
+          CAMERA_PERMISSIONS_REQUEST);
+    }
+    if (hasPermission(Manifest.permission.RECORD_AUDIO)) {
+      startSpeechRecognizer();
+    } else {
+      ActivityCompat.requestPermissions(MainActivity.this,
+          new String[] { Manifest.permission.RECORD_AUDIO },
+          RECORD_AUDIO_PERMISSIONS_REQUEST);
+    }
+  }
+
+  private void preInitCamera2() {
+    if (Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT) {
+      mCamera2StateCallback = new CameraDevice.StateCallback() {
+        @Override
+        public void onOpened(CameraDevice camera) {
+          mCamera2Device = camera;
+          lawg.d("CameraStateCallback PREVIEW STARTED");
+          startCamera2Preview();
+        }
+
+        @Override
+        public void onDisconnected(CameraDevice camera) {
+          lawg.d("CameraStateCallback onDisconnected()");
+        }
+
+        @Override
+        public void onError(CameraDevice camera, int error) {
+          lawg.d("CameraStateCallback onError() errorCode: " + error);
+        }
+      };
+    }
   }
 
   private void captureImage() {
