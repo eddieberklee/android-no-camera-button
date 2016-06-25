@@ -125,7 +125,6 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
 
     mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
     // Immediately start listening as soon as the app is launched
-    startListening();
 
     mSurfaceHolder = mSurfaceView.getHolder();
     mSurfaceHolder.addCallback(this);
@@ -378,12 +377,12 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
   RecognitionListener mRecognitionListener = new RecognitionListener() {
     @Override
     public void onReadyForSpeech(Bundle params) {
-
+      lawg.d("[RecognitionListener] onReadyForSpeech()");
     }
 
     @Override
     public void onBeginningOfSpeech() {
-
+      lawg.d("[RecognitionListener] onBeginningOfSpeech()");
     }
 
     @Override
@@ -398,18 +397,20 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
 
     @Override
     public void onEndOfSpeech() {
+      lawg.d("[RecognitionListener] onEndOfSpeech()");
       startListening();
     }
 
     @Override
     public void onError(int error) {
-      Log.e(TAG, "int error: " + error);
+      lawg.d("[RecognitionListener] onError() errorCode: " + error);
       Toast.makeText(MainActivity.this, "Speech Recognition Error", Toast.LENGTH_SHORT).show();
       mSpeechRecognizer.cancel();
     }
 
     @Override
     public void onResults(Bundle results) {
+      lawg.d("[RecognitionListener] onResults()");
       ArrayList<String> resultsArray = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
       StringBuilder sb = new StringBuilder();
       for (int i = 0; i < resultsArray.size(); i++) {
