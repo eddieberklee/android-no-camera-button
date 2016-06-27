@@ -9,26 +9,26 @@
                 tools:context=".HomeActivity">
 
     <Button
-        android:id="@+id/start_button"
+        android:id="@+id/start_camera_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_above="@+id/surface_view"
         android:text="Start"/>
 
     <Button
-        android:id="@+id/capture_button"
+        android:id="@+id/capture_camera_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_above="@+id/surface_view"
-        android:layout_toRightOf="@+id/start_button"
+        android:layout_toRightOf="@+id/start_camera_button"
         android:text="Capture"/>
 
     <Button
-        android:id="@+id/stop_button"
+        android:id="@+id/stop_camera_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_above="@+id/surface_view"
-        android:layout_toRightOf="@+id/capture_button"
+        android:layout_toRightOf="@+id/capture_camera_button"
         android:text="Stop"/>
 
     <TextView
@@ -52,7 +52,7 @@
         android:layout_height="match_parent"/>
 
     <Button
-        android:id="@+id/start_speech"
+        android:id="@+id/start_speech_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
@@ -60,11 +60,11 @@
         android:visibility="gone"/>
 
     <Button
-        android:id="@+id/stop_speech"
+        android:id="@+id/stop_speech_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_toRightOf="@id/start_speech"
+        android:layout_toRightOf="@id/start_speech_button"
         android:text="Speech End"
         android:visibility="gone"/>
 
