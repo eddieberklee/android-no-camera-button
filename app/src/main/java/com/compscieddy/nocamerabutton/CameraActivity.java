@@ -95,30 +95,8 @@ public class CameraActivity extends ActionBarActivity implements SurfaceHolder.C
     setContentView(R.layout.activity_camera);
     ButterKnife.bind(this);
 
-    setListeners();
     checkPermissions();
-
-    if (Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT) {
-      mCamera2StateCallback = new CameraDevice.StateCallback() {
-        @Override
-        public void onOpened(CameraDevice camera) {
-          mCamera2Device = camera;
-          lawg.d("CameraStateCallback PREVIEW STARTED");
-          startCamera2Preview();
-        }
-
-        @Override
-        public void onDisconnected(CameraDevice camera) {
-          lawg.d("CameraStateCallback onDisconnected()");
-        }
-
-        @Override
-        public void onError(CameraDevice camera, int error) {
-          lawg.d("CameraStateCallback onError() errorCode: " + error);
-        }
-      };
-    }
-
+    setListeners();
     initCamera2();
     if (hasPermission(Manifest.permission.RECORD_AUDIO)) {
       startSpeechRecognizer();
@@ -244,6 +222,27 @@ public class CameraActivity extends ActionBarActivity implements SurfaceHolder.C
         Log.d("Log", "onPictureTaken - jpeg");
       }
     };
+
+    if (Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT) {
+      mCamera2StateCallback = new CameraDevice.StateCallback() {
+        @Override
+        public void onOpened(CameraDevice camera) {
+          mCamera2Device = camera;
+          lawg.d("CameraStateCallback PREVIEW STARTED");
+          startCamera2Preview();
+        }
+
+        @Override
+        public void onDisconnected(CameraDevice camera) {
+          lawg.d("CameraStateCallback onDisconnected()");
+        }
+
+        @Override
+        public void onError(CameraDevice camera, int error) {
+          lawg.d("CameraStateCallback onError() errorCode: " + error);
+        }
+      };
+    }
 
   }
 
@@ -391,7 +390,6 @@ public class CameraActivity extends ActionBarActivity implements SurfaceHolder.C
     mCamera2CaptureRequestBuilder.addTarget(mCamera2Surface);
 
     try {
-      lawg.d("Has camera permission? " + hasPermission(Manifest.permission.CAMERA));
       mCamera2Device.createCaptureSession(Arrays.asList(mCamera2Surface), new CameraCaptureSession.StateCallback() {
         @Override
         public void onConfigured(CameraCaptureSession session) {
