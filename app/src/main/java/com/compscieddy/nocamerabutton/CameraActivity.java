@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -19,7 +20,9 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.speech.RecognitionListener;
 import android.speech.SpeechRecognizer;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.text.TextUtils;
 import android.util.Log;
@@ -41,12 +44,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import butterknife.Bind;
 import butterknife.ButterKnife;
 
 
-public class MainActivity extends ActionBarActivity implements SurfaceHolder.Callback {
+public class CameraActivity extends ActionBarActivity implements SurfaceHolder.Callback, ActivityCompat.OnRequestPermissionsResultCallback,
+    View.OnClickListener {
 
-  private static final String TAG = MainActivity.class.getSimpleName();
+  private static final Lawg lawg = Lawg.newInstance(CameraActivity.class.getSimpleName());
 
   // OG Camera API
   Camera mCamera;
@@ -63,54 +68,128 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
   Surface mCamera2Surface;
   CameraCaptureSession mCamera2CaptureSession;
 
-  SurfaceView mSurfaceView;
+  public static final int BASE_REQUEST_CODE = 100;
+  public static final int CAMERA_PERMISSIONS_REQUEST = BASE_REQUEST_CODE + 1;
+  public static final int RECORD_AUDIO_PERMISSIONS_REQUEST = BASE_REQUEST_CODE + 2;
+
   SurfaceHolder mSurfaceHolder;
 
-  Button mStartButton, mStopButton, mCaptureButton;
-  Button mStartSpeechButton, mStopSpeechButton;
+  @Bind(R.id.start_camera_button) Button mStartCameraButton;
+  @Bind(R.id.stop_camera_button) Button mStopCameraButton;
+  @Bind(R.id.capture_camera_button) Button mCaptureCameraButton;
+  @Bind(R.id.start_speech_button) Button mStartSpeechButton;
+  @Bind(R.id.stop_speech_button) Button mStopSpeechButton;
+  @Bind(R.id.display_text1) TextView mDisplayText1;
+  @Bind(R.id.display_text2) TextView mDisplayText2;
+  @Bind(R.id.surface_view) SurfaceView mSurfaceView;
 
   SpeechRecognizer mSpeechRecognizer;
   AudioManager mAudioManager;
 
-  TextView mDisplayText1, mDisplayText2;
   boolean mIsPreviewRunning;
-
-  // App Name : Kimchi Camera?
+  boolean mCamera2SurfaceCreated = false;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    setContentView(R.layout.activity_home);
+    setContentView(R.layout.activity_camera);
     ButterKnife.bind(this);
 
-    preInitCamera2();
     init();
-    initCameraSpeech();
+    checkPermissions();
+    initCamera2();
+    if (hasPermission(Manifest.permission.RECORD_AUDIO)) {
+      startSpeechRecognizer();
+    }
 
+  }
+
+  private void startSpeechRecognizer() {
+    lawg.d("startSpeechRecognizer()");
     mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
-    if (SpeechRecognizer.isRecognitionAvailable(this)) {
-      Log.d(TAG, "Speech Recognition detected as being available");
+    if (SpeechRecognizer.isRecognitionAvailable(this)
+        && hasPermission(Manifest.permission.RECORD_AUDIO)) {
+      lawg.d("Speech Recognition detected as being available");
       mSpeechRecognizer.setRecognitionListener(mRecognitionListener);
     } else {
       Toast.makeText(this, "Speech Recognition Not Available", Toast.LENGTH_SHORT).show();
     }
+  }
 
-    mStartSpeechButton.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View v) {
+  private boolean hasPermission(String permissionName) {
+    int permissionCheck = ContextCompat.checkSelfPermission(CameraActivity.this, permissionName);
+    return (permissionCheck == PackageManager.PERMISSION_GRANTED);
+  }
+
+  @Override
+  public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+    switch (requestCode) {
+      case CAMERA_PERMISSIONS_REQUEST:
+        lawg.d("CAMERA permission response " + grantResults
+            + ((grantResults.length > 0) ? grantResults[0] : ""));
+        break;
+      case RECORD_AUDIO_PERMISSIONS_REQUEST:
+        lawg.d("RECORD_AUDIO permission response " + grantResults
+            + ((grantResults.length > 0) ? grantResults[0] : ""));
+        startSpeechRecognizer();
+        break;
+    }
+  }
+
+  @Override
+  public void onClick(View v) {
+    switch (v.getId()) {
+      case R.id.start_speech_button:
         startListening();
-      }
-    });
-    mStopSpeechButton.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View v) {
+        break;
+      case R.id.stop_speech_button:
         mSpeechRecognizer.stopListening();
-      }
-    });
+        break;
+      case R.id.start_camera_button:
+        if (Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT) {
+          startCamera2();
+        } else {
+          startCamera();
+        }
+        break;
+      case R.id.stop_camera_button:
+        stopCamera();
+        break;
+      case R.id.capture_camera_button:
+        captureImage();
+        break;
+    }
+  }
+
+  private void init() {
+
+    mStartSpeechButton.setOnClickListener(this);
+    mStopSpeechButton.setOnClickListener(this);
+    mStartCameraButton.setOnClickListener(this);
+    mStopCameraButton.setOnClickListener(this);
+    mCaptureCameraButton.setOnClickListener(this);
 
     mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-    // Immediately start listening as soon as the app is launched
+  }
 
+  private void checkPermissions() {
+    lawg.d("checkPermissions()");
+    if (!hasPermission(Manifest.permission.CAMERA)) {
+      lawg.d("No camera permissions granted, requesting now -");
+      ActivityCompat.requestPermissions(CameraActivity.this,
+          new String[] { Manifest.permission.CAMERA },
+          CAMERA_PERMISSIONS_REQUEST);
+    } if (!hasPermission(Manifest.permission.RECORD_AUDIO)) {
+      lawg.d("No record audio permissions granted, requesting now -");
+      ActivityCompat.requestPermissions(CameraActivity.this,
+          new String[] { Manifest.permission.RECORD_AUDIO },
+          RECORD_AUDIO_PERMISSIONS_REQUEST);
+    }
+  }
+
+  @TargetApi(CAMERA_2_API_LIMIT)
+  private void initCamera2() {
     mSurfaceHolder = mSurfaceView.getHolder();
     mSurfaceHolder.addCallback(this);
     mSurfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
@@ -119,7 +198,6 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
         Log.d("Log", "onPictureTaken - raw");
       }
     };
-
     /** Handles data for jpeg picture */
     shutterCallback = new Camera.ShutterCallback() {
       public void onShutter() {
@@ -145,79 +223,51 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
       }
     };
 
-  }
-
-  private void init() {
-    mStartSpeechButton = (Button) findViewById(R.id.start_speech);
-    mStopSpeechButton = (Button) findViewById(R.id.stop_speech);
-    mStartButton = (Button) findViewById(R.id.start_button);
-    mStopButton = (Button) findViewById(R.id.stop_button);
-    mCaptureButton = (Button) findViewById(R.id.capture_button);
-    mDisplayText1 = (TextView) findViewById(R.id.display_text1);
-    mDisplayText2 = (TextView) findViewById(R.id.display_text2);
-    mSurfaceView = (SurfaceView) findViewById(R.id.surface_view);
-
-    mStartButton.setOnClickListener(new Button.OnClickListener() {
-      public void onClick(View v) {
-        if (Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT) {
-          startCamera2();
-        } else {
-          startCamera();
-        }
-      }
-    });
-    mStopButton.setOnClickListener(new Button.OnClickListener() {
-      public void onClick(View v) {
-        stopCamera();
-      }
-    });
-    mCaptureButton.setOnClickListener(new View.OnClickListener() {
+    mCamera2StateCallback = new CameraDevice.StateCallback() {
       @Override
-      public void onClick(View v) {
-        captureImage();
+      public void onOpened(CameraDevice camera) {
+        mCamera2Device = camera;
+        lawg.d("CameraStateCallback PREVIEW STARTED");
+        startCamera2();
+
+        try {
+          lawg.d("Has camera permission? " + hasPermission(Manifest.permission.CAMERA));
+          mCamera2Device.createCaptureSession(Arrays.asList(mCamera2Surface), new CameraCaptureSession.StateCallback() {
+            @Override
+            public void onConfigured(CameraCaptureSession session) {
+              mCamera2CaptureSession = session;
+              updateCamera2Preview();
+            }
+
+            @Override
+            public void onConfigureFailed(CameraCaptureSession session) {
+              Toast.makeText(CameraActivity.this, "onConfigureFailed", Toast.LENGTH_SHORT).show();
+            }
+          }, null);
+        } catch (CameraAccessException e) {
+          e.printStackTrace();
+        }
+
+        try {
+          mCamera2CaptureRequestBuilder = mCamera2Device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+        } catch (CameraAccessException e) {
+          e.printStackTrace();
+        }
+
+        mCamera2CaptureRequestBuilder.addTarget(mCamera2Surface);
       }
-    });
 
-  }
+      @Override
+      public void onDisconnected(CameraDevice camera) {
+        lawg.d("CameraStateCallback onDisconnected()");
+      }
 
-  private void initCameraSpeech() {
-    if (hasPermission(Manifest.permission.CAMERA)) {
-      startCamera2();
-    } else {
-      ActivityCompat.requestPermissions(MainActivity.this,
-          new String[] { Manifest.permission.CAMERA },
-          CAMERA_PERMISSIONS_REQUEST);
-    }
-    if (hasPermission(Manifest.permission.RECORD_AUDIO)) {
-      startSpeechRecognizer();
-    } else {
-      ActivityCompat.requestPermissions(MainActivity.this,
-          new String[] { Manifest.permission.RECORD_AUDIO },
-          RECORD_AUDIO_PERMISSIONS_REQUEST);
-    }
-  }
+      @Override
+      public void onError(CameraDevice camera, int error) {
+        lawg.d("CameraStateCallback onError() errorCode: " + error);
+      }
+    };
 
-  private void preInitCamera2() {
-    if (Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT) {
-      mCamera2StateCallback = new CameraDevice.StateCallback() {
-        @Override
-        public void onOpened(CameraDevice camera) {
-          mCamera2Device = camera;
-          lawg.d("CameraStateCallback PREVIEW STARTED");
-          startCamera2Preview();
-        }
-
-        @Override
-        public void onDisconnected(CameraDevice camera) {
-          lawg.d("CameraStateCallback onDisconnected()");
-        }
-
-        @Override
-        public void onError(CameraDevice camera, int error) {
-          lawg.d("CameraStateCallback onError() errorCode: " + error);
-        }
-      };
-    }
   }
 
   private void captureImage() {
@@ -231,16 +281,16 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
         @Override
         public void onError(int error, Camera camera) {
           if (error == Camera.CAMERA_ERROR_UNKNOWN) {
-            Log.e(TAG, "Camera Error: Unknown - what a great error huh...");
+            lawg.e("Camera Error: Unknown - what a great error huh...");
           } else if (error == Camera.CAMERA_ERROR_SERVER_DIED) {
-            Log.e(TAG, "Camera Error: Server Died - am I supposed to revive it at this point?");
+            lawg.e("Camera Error: Server Died - am I supposed to revive it at this point?");
           } else {
-            Log.e(TAG, "Some unknown Camera error occurred"); // should never be seen but being cautious
+            lawg.e("Some unknown Camera error occurred"); // should never be seen but being cautious
           }
         }
       });
     } catch (RuntimeException e) {
-      Log.e(TAG, "init_camera: " + e);
+      lawg.e("init_camera: " + e);
       return;
     }
     Camera.Parameters param;
@@ -255,54 +305,30 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
       mCamera.startPreview();
       //mCamera.takePicture(shutter, raw, jpeg)
     } catch (Exception e) {
-      Log.e(TAG, "init_camera: " + e);
+      lawg.e("init_camera: " + e);
       return;
     }
   }
 
   @TargetApi(CAMERA_2_API_LIMIT)
   private void startCamera2() {
+    lawg.d("startCamera2()");
+
     mCamera2Manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
     try {
       String cameraId = mCamera2Manager.getCameraIdList()[0]; // first one should be the back camera
       CameraCharacteristics characteristics = mCamera2Manager.getCameraCharacteristics(cameraId);
-      mCamera2Manager.openCamera(cameraId, mCamera2StateCallback, null);
-    } catch (CameraAccessException e) {
-      e.printStackTrace();
-    }
-  }
-
-  @TargetApi(CAMERA_2_API_LIMIT)
-  private void startCamera2Preview() {
-    if (mCamera2Device == null) {
-      Log.e(TAG, "mCamera2Device null");
-      return;
-    }
-
-    try {
-      mCamera2CaptureRequestBuilder = mCamera2Device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+      try {
+//        if (mCameraPermissionGranted)
+        mCamera2Manager.openCamera(cameraId, mCamera2StateCallback, null);
+      } catch (SecurityException e) {
+        lawg.e("Error in startCamera2 " + e);
+        e.printStackTrace();
+      }
     } catch (CameraAccessException e) {
       e.printStackTrace();
     }
 
-    mCamera2CaptureRequestBuilder.addTarget(mCamera2Surface);
-
-    try {
-      mCamera2Device.createCaptureSession(Arrays.asList(mCamera2Surface), new CameraCaptureSession.StateCallback() {
-        @Override
-        public void onConfigured(CameraCaptureSession session) {
-          mCamera2CaptureSession = session;
-          updateCamera2Preview();
-        }
-
-        @Override
-        public void onConfigureFailed(CameraCaptureSession session) {
-          Toast.makeText(MainActivity.this, "onConfigureFailed", Toast.LENGTH_SHORT).show();
-        }
-      }, null);
-    } catch (CameraAccessException e) {
-      e.printStackTrace();
-    }
   }
 
   @TargetApi(CAMERA_2_API_LIMIT)
@@ -330,7 +356,7 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
       mCamera.startPreview();
       mIsPreviewRunning = true;
     } catch (Exception e) {
-      Log.e(TAG, "Cannot start preview");
+      lawg.e("Cannot start preview");
     }
   }
 
@@ -357,6 +383,7 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
       }
 
       if (Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT) {
+        lawg.d("surfaceChanged()");
         startCamera2();
       } else {
         startCamera();
@@ -366,11 +393,18 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
 
   public void surfaceCreated(SurfaceHolder holder) {
     mCamera2Surface = holder.getSurface();
+    mCamera2SurfaceCreated = true;
+    lawg.d("surfaceCreated() holder: " + holder + " surface: " + mCamera2Surface);
     if (Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT) {
+      lawg.d("surfaceCreated()");
       startCamera2();
     } else {
       startCamera();
     }
+  }
+
+  private void startCamera2Preview() {
+
   }
 
   public void surfaceDestroyed(SurfaceHolder holder) {
@@ -429,7 +463,7 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
     @Override
     public void onError(int error) {
       lawg.d("[RecognitionListener] onError() errorCode: " + error);
-      Toast.makeText(MainActivity.this, "Speech Recognition Error", Toast.LENGTH_SHORT).show();
+      Toast.makeText(CameraActivity.this, "Speech Recognition Error", Toast.LENGTH_SHORT).show();
       mSpeechRecognizer.cancel();
     }
 
@@ -444,6 +478,7 @@ public class MainActivity extends ActionBarActivity implements SurfaceHolder.Cal
         if (i != resultsArray.size() - 1) sb.append(", ");
         if (TextUtils.equals(word.toLowerCase(), "cheese")) captureImage();
       }
+      lawg.d("Words detected: \n" + sb.toString());
       mDisplayText1.setText(sb.toString());
 
       // repeat listen
