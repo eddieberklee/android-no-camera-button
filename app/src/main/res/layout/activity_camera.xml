@@ -2,7 +2,15 @@
                 xmlns:tools="http://schemas.android.com/tools"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                xmlns:app="http://schemas.android.com/apk/res-auto"
                 tools:context=".CameraActivity">
+
+    <com.compscieddy.shoutake.AutoFitTextureView
+        android:id="@+id/texture"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentBottom="true"/>
 
     <Button
         android:id="@+id/start_camera_button"
@@ -28,25 +36,23 @@
         android:layout_alignRight="@+id/texture"
         android:text="Stop"/>
 
-    <TextView
+    <com.compscieddy.shoutake.FontTextView
         android:id="@+id/display_text1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
         android:layout_alignParentTop="true"
-        android:text="..."/>
+        android:textColor="@color/white_transp_20"
+        android:text="..."
+        app:fontface="montserrat_light"/>
 
-    <TextView
+    <com.compscieddy.shoutake.FontTextView
         android:id="@+id/display_text2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@+id/display_text1"
+        android:textColor="@color/white_transp_20"
         android:text="..."/>
-
-    <com.compscieddy.shoutake.AutoFitTextureView
-        android:id="@+id/texture"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@+id/display_text2"/>
 
     <Button
         android:id="@+id/start_speech_button"
