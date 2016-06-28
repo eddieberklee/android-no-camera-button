@@ -218,9 +218,6 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
     checkPermissions();
     setListeners();
     initCamera2();
-    if (hasPermission(Manifest.permission.RECORD_AUDIO)) {
-      startSpeechRecognizer();
-    }
 
   }
 
@@ -311,6 +308,14 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
     } else {
       Toast.makeText(this, "Speech Recognition Not Available", Toast.LENGTH_SHORT).show();
     }
+  }
+
+  private void stopSpeechRecognizer() {
+    mAudioManager.setStreamMute(AudioManager.STREAM_RING, false);
+    if (mSpeechRecognizer != null) {
+      mSpeechRecognizer.destroy();
+    }
+    mSpeechRecognizer.stopListening();
   }
 
   private boolean hasPermission(String permissionName) {
@@ -405,6 +410,7 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
   protected void onResume() {
     super.onResume();
     startBackgroundThread();
+    startSpeechRecognizer();
 
     // When the screen is turned off and turned back on, the SurfaceTexture is already
     // available, and "onSurfaceTextureAvailable" will not be called. In that case, we can open
@@ -943,7 +949,7 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
       }
       lawg.d("Words detected: \n" + sb.toString());
       mDisplayText1.setText(sb.toString());
-      
+
       for (int i = 0; i < resultsArray.size(); i++) {
         String word = resultsArray.get(i);
         addFloatingWord(word);
@@ -1020,7 +1026,11 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
         wordViews.put(word, wordView);
         mRootView.addView(wordView);
 
-        wordView.animate().alpha(0f).setDuration(5000).withEndAction(new Runnable() {
+        int translationY = Etils.getRandomNumberInRange(Etils.dpToPx(10), Etils.dpToPx(40));
+
+        wordView.animate()
+            .translationY(translationY)
+            .alpha(0f).setDuration(5000).withEndAction(new Runnable() {
           @Override
           public void run() {
             wordViews.remove(word);
@@ -1034,8 +1044,8 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
   @Override
   protected void onPause() {
     super.onPause();
-    mAudioManager.setStreamMute(AudioManager.STREAM_RING, false);
     stopCamera2();
+    stopSpeechRecognizer();
     stopBackgroundThread();
   }
 

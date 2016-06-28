@@ -61,7 +61,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:text="Speech Start"/>
+        android:text="Speech Start"
+        android:visibility="gone"/>
 
     <Button
         android:id="@+id/stop_speech_button"
@@ -69,7 +70,8 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_toRightOf="@id/start_speech_button"
-        android:text="Speech End"/>
+        android:text="Speech End"
+        android:visibility="gone"/>
 
 
 
