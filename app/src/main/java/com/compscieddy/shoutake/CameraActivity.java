@@ -33,6 +33,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -196,10 +197,12 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
 
   private ViewGroup mRootView;
   private LayoutInflater mLayoutInflater;
+  private Handler mHandler;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    mHandler = new Handler(Looper.getMainLooper());
     mLayoutInflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
     mRootView = (ViewGroup) mLayoutInflater.inflate(R.layout.activity_camera, null);
     setContentView(mRootView);
@@ -890,15 +893,16 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
     return super.onOptionsItemSelected(item);
   }
 
+  private static final boolean DEBUG_RECOGNITION = false;
   RecognitionListener mRecognitionListener = new RecognitionListener() {
     @Override
     public void onReadyForSpeech(Bundle params) {
-      lawg.d("[RecognitionListener] onReadyForSpeech()");
+      if (DEBUG_RECOGNITION) lawg.d("[RecognitionListener] onReadyForSpeech()");
     }
 
     @Override
     public void onBeginningOfSpeech() {
-      lawg.d("[RecognitionListener] onBeginningOfSpeech()");
+      if (DEBUG_RECOGNITION) lawg.d("[RecognitionListener] onBeginningOfSpeech()");
     }
 
     @Override
@@ -908,18 +912,18 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
 
     @Override
     public void onBufferReceived(byte[] buffer) {
-      lawg.d("onBufferReceived()");
+      if (DEBUG_RECOGNITION) lawg.d("onBufferReceived()");
     }
 
     @Override
     public void onEndOfSpeech() {
-      lawg.d("[RecognitionListener] onEndOfSpeech()");
+      if (DEBUG_RECOGNITION) lawg.d("[RecognitionListener] onEndOfSpeech()");
 //      startListening();
     }
 
     @Override
     public void onError(int error) {
-      lawg.d("[RecognitionListener] onError() errorCode: " + error);
+      if (DEBUG_RECOGNITION) lawg.d("[RecognitionListener] onError() errorCode: " + error);
       Toast.makeText(CameraActivity.this, "Speech Recognition Error", Toast.LENGTH_SHORT).show();
       startListening();
     }
@@ -968,7 +972,7 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
 
     @Override
     public void onEvent(int eventType, Bundle params) {
-      lawg.d("onEvent()");
+      if (DEBUG_RECOGNITION) lawg.d("onEvent()");
     }
   };
 
@@ -993,17 +997,39 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
   }
 
   Map<String, View> wordViews = new HashMap<>();
-  private void addFloatingWord(String word) {
-    View wordView = mLayoutInflater.inflate(R.layout.view_word, mRootView, false);
-    TextView wordTextView = ButterKnife.findById(wordView, R.id.word);
-    wordTextView.setText(word);
+  long lastWordAddedMillis = -1;
+  final long SPACING_GAP_MILLIS = 400;
 
-    int xVariance = Etils.getRandomNumberInRange(Etils.dpToPx(-100), Etils.dpToPx(100));
-    int yVariance = Etils.getRandomNumberInRange(Etils.dpToPx(-300), Etils.dpToPx(300));
-    wordView.setX(Etils.dpToPx(100) + xVariance);
-    wordView.setY(Etils.dpToPx(300) + yVariance);
-    wordViews.put(word, wordView);
-    mRootView.addView(wordView);
+  private void addFloatingWord(final String word) {
+
+    long currentTimeMillis = System.currentTimeMillis();
+    if (lastWordAddedMillis < currentTimeMillis) {
+      lastWordAddedMillis = currentTimeMillis;
+    }
+    lastWordAddedMillis += SPACING_GAP_MILLIS;
+
+    mHandler.postDelayed(new Runnable() {
+      @Override
+      public void run() {
+        final View wordView = mLayoutInflater.inflate(R.layout.view_word, mRootView, false);
+        TextView wordTextView = ButterKnife.findById(wordView, R.id.word);
+        wordTextView.setText(word);
+        int xVariance = Etils.getRandomNumberInRange(Etils.dpToPx(-100), Etils.dpToPx(100));
+        int yVariance = Etils.getRandomNumberInRange(Etils.dpToPx(-300), Etils.dpToPx(300));
+        wordView.setX(Etils.dpToPx(200) + xVariance);
+        wordView.setY(Etils.dpToPx(400) + yVariance);
+        wordViews.put(word, wordView);
+        mRootView.addView(wordView);
+
+        wordView.animate().alpha(0f).setDuration(5000).withEndAction(new Runnable() {
+          @Override
+          public void run() {
+            wordViews.remove(word);
+            mRootView.removeView(wordView);
+          }
+        });
+      }
+    }, lastWordAddedMillis - currentTimeMillis);
   }
 
   @Override
