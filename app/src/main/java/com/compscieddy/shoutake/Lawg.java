@@ -1,4 +1,4 @@
-package com.compscieddy.nocamerabutton;
+package com.compscieddy.shoutake;
 
 import android.util.Log;
 

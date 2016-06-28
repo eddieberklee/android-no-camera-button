@@ -1,4 +1,4 @@
-package com.compscieddy.nocamerabutton;
+package com.compscieddy.shoutake;
 
 /**
  * Created by elee on 11/26/15.

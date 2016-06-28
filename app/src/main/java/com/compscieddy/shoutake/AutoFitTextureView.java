@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.compscieddy.nocamerabutton;
+package com.compscieddy.shoutake;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -22,6 +22,7 @@ import android.view.TextureView;
 
 /**
  * A {@link TextureView} that can be adjusted to a specified aspect ratio.
+ * From https://github.com/googlesamples/android-Camera2Basic
  */
 public class AutoFitTextureView extends TextureView {
 
