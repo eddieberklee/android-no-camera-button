@@ -43,11 +43,13 @@ import android.support.v7.app.ActionBarActivity;
 import android.text.TextUtils;
 import android.util.Size;
 import android.util.SparseIntArray;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -62,7 +64,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -164,12 +168,10 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
    * Max preview width that is guaranteed by Camera2 API
    */
   private static final int MAX_PREVIEW_WIDTH = 1920;
-
   /**
    * Max preview height that is guaranteed by Camera2 API
    */
   private static final int MAX_PREVIEW_HEIGHT = 1080;
-
 
   private Handler mBackgroundHandler;
   /**
@@ -192,12 +194,15 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
    */
   private ImageReader.OnImageAvailableListener mOnImageAvailableListener;
 
-  boolean mIsPreviewRunning;
+  private ViewGroup mRootView;
+  private LayoutInflater mLayoutInflater;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    setContentView(R.layout.activity_camera);
+    mLayoutInflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
+    mRootView = (ViewGroup) mLayoutInflater.inflate(R.layout.activity_camera, null);
+    setContentView(mRootView);
     ButterKnife.bind(this);
 
     mFile = new File(getExternalFilesDir(null), "pic.jpg");
@@ -206,7 +211,6 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
       initOnImageAvailableListener();
       initCaptureCallback();
     }
-
 
     checkPermissions();
     setListeners();
@@ -936,6 +940,12 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
       lawg.d("Words detected: \n" + sb.toString());
       mDisplayText1.setText(sb.toString());
 
+      int max = Math.min(4, resultsArray.size());
+      for (int i = 0; i < max; i++) {
+        String word = resultsArray.get(i);
+        addFloatingWord(word);
+      }
+
       // repeat listen
       startListening();
     }
@@ -980,6 +990,20 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
 //    recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1000 * 20);
 //    recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000 * 20);
     mSpeechRecognizer.startListening(recognizerIntent);
+  }
+
+  Map<String, View> wordViews = new HashMap<>();
+  private void addFloatingWord(String word) {
+    View wordView = mLayoutInflater.inflate(R.layout.view_word, mRootView, false);
+    TextView wordTextView = ButterKnife.findById(wordView, R.id.word);
+    wordTextView.setText(word);
+
+    int xVariance = Etils.getRandomNumberInRange(Etils.dpToPx(-100), Etils.dpToPx(100));
+    int yVariance = Etils.getRandomNumberInRange(Etils.dpToPx(-300), Etils.dpToPx(300));
+    wordView.setX(Etils.dpToPx(100) + xVariance);
+    wordView.setY(Etils.dpToPx(300) + yVariance);
+    wordViews.put(word, wordView);
+    mRootView.addView(wordView);
   }
 
   @Override
