@@ -943,9 +943,8 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
       }
       lawg.d("Words detected: \n" + sb.toString());
       mDisplayText1.setText(sb.toString());
-
-      int max = Math.min(4, resultsArray.size());
-      for (int i = 0; i < max; i++) {
+      
+      for (int i = 0; i < resultsArray.size(); i++) {
         String word = resultsArray.get(i);
         addFloatingWord(word);
       }
