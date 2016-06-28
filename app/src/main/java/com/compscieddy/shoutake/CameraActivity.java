@@ -998,7 +998,7 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
 
   Map<String, View> wordViews = new HashMap<>();
   long lastWordAddedMillis = -1;
-  final long SPACING_GAP_MILLIS = 400;
+  final long SPACING_GAP_MILLIS = 300;
 
   private void addFloatingWord(final String word) {
 

@@ -40,9 +40,10 @@
         android:id="@+id/display_text1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="50dp"
+        android:layout_marginLeft="10dp"
         android:layout_alignParentTop="true"
-        android:textColor="@color/white_transp_20"
+        android:textColor="@color/white_transp_30"
         android:text="..."
         app:fontface="montserrat_light"/>
 
@@ -51,7 +52,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@+id/display_text1"
-        android:textColor="@color/white_transp_20"
+        android:layout_alignLeft="@+id/display_text1"
+        android:textColor="@color/white_transp_30"
         android:text="..."/>
 
     <Button
