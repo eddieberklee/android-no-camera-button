@@ -44,6 +44,7 @@ import android.support.v7.app.ActionBarActivity;
 import android.text.TextUtils;
 import android.util.Size;
 import android.util.SparseIntArray;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -942,6 +943,7 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
     public void onResults(Bundle results) {
       lawg.d("[RecognitionListener] onResults()");
       ArrayList<String> resultsArray = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+      float[] confidenceScores = results.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES);
       StringBuilder sb = new StringBuilder();
       for (int i = 0; i < resultsArray.size(); i++) {
         String word = resultsArray.get(i);
@@ -956,7 +958,7 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
 
       for (int i = 0; i < resultsArray.size(); i++) {
         String word = resultsArray.get(i);
-        addFloatingWord(word);
+        addFloatingWord(word, confidenceScores[i]);
       }
 
       // repeat listen
@@ -994,14 +996,18 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
     if (mSpeechRecognizer != null) {
       mSpeechRecognizer.destroy();
     }
+    mAudioManager.setStreamMute(AudioManager.STREAM_MUSIC, true);
+    mAudioManager.setStreamMute(AudioManager.STREAM_ALARM, true);
+    mAudioManager.setStreamMute(AudioManager.STREAM_NOTIFICATION, true);
+    mAudioManager.setStreamMute(AudioManager.STREAM_SYSTEM, true);
     mAudioManager.setStreamMute(AudioManager.STREAM_RING, true);
     mSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
     mSpeechRecognizer.setRecognitionListener(mRecognitionListener);
     Intent recognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
     recognizerIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-//    recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1000 * 20);
-//    recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1000 * 20);
-//    recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000 * 20);
+    recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1000 * 5);
+    recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1000 * 5);
+    recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000 * 5);
     mSpeechRecognizer.startListening(recognizerIntent);
   }
 
@@ -1019,7 +1025,7 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
       R.color.flatui_midnightblue_1, R.color.flatui_midnightblue_2,
   };
 
-  private void addFloatingWord(final String word) {
+  private void addFloatingWord(final String word, final float confidence) {
 
     long currentTimeMillis = System.currentTimeMillis();
     if (lastWordAddedMillis < currentTimeMillis) {
@@ -1035,6 +1041,10 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
         Etils.applyColorFilter(wordView.getBackground(), getResources().getColor(randomColors[randomColor]), true);
         TextView wordTextView = ButterKnife.findById(wordView, R.id.word);
         wordTextView.setText(word);
+
+        float scale = Etils.mapValue(confidence, 0, 1, 1, 2.5f);
+        wordTextView.setTextSize(TypedValue.COMPLEX_UNIT_PX, wordTextView.getTextSize() * scale);
+
         int xVariance = Etils.getRandomNumberInRange(Etils.dpToPx(-100), Etils.dpToPx(100));
         int yVariance = Etils.getRandomNumberInRange(Etils.dpToPx(-300), Etils.dpToPx(300));
         wordView.setX(Etils.dpToPx(200) + xVariance);

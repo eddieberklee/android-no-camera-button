@@ -16,5 +16,5 @@
         android:layout_height="wrap_content"
         app:fontface="montserrat_light"
         android:textColor="@color/white"
-        android:textSize="18sp"/>
+        android:textSize="16sp"/>
 </LinearLayout>
