@@ -5,10 +5,10 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:background="@drawable/rounded_fill_word_view"
-    android:paddingTop="6dp"
-    android:paddingBottom="6dp"
-    android:paddingLeft="10dp"
-    android:paddingRight="10dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp"
+    android:paddingLeft="14dp"
+    android:paddingRight="14dp"
     android:orientation="vertical">
     <com.compscieddy.shoutake.FontTextView
         android:id="@+id/word"
@@ -16,5 +16,5 @@
         android:layout_height="wrap_content"
         app:fontface="montserrat_light"
         android:textColor="@color/white"
-        android:textSize="16sp"/>
+        android:textSize="18sp"/>
 </LinearLayout>

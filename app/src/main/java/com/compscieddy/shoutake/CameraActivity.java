@@ -1008,6 +1008,16 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
   Map<String, View> wordViews = new HashMap<>();
   long lastWordAddedMillis = -1;
   final long SPACING_GAP_MILLIS = 300;
+  int[] randomColors = new int[] {
+      R.color.flatui_red_1, R.color.flatui_red_2,
+      R.color.flatui_orange_1, R.color.flatui_orange_2,
+      R.color.flatui_yellow_1, R.color.flatui_yellow_2,
+      R.color.flatui_green_1, R.color.flatui_green_2,
+      R.color.flatui_teal_1, R.color.flatui_teal_2,
+      R.color.flatui_blue_1, R.color.flatui_blue_2,
+      R.color.flatui_purple_1, R.color.flatui_purple_2,
+      R.color.flatui_midnightblue_1, R.color.flatui_midnightblue_2,
+  };
 
   private void addFloatingWord(final String word) {
 
@@ -1021,6 +1031,8 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
       @Override
       public void run() {
         final View wordView = mLayoutInflater.inflate(R.layout.view_word, mRootView, false);
+        int randomColor = Etils.getRandomNumberInRange(0, randomColors.length);
+        Etils.applyColorFilter(wordView.getBackground(), getResources().getColor(randomColors[randomColor]), true);
         TextView wordTextView = ButterKnife.findById(wordView, R.id.word);
         wordTextView.setText(word);
         int xVariance = Etils.getRandomNumberInRange(Etils.dpToPx(-100), Etils.dpToPx(100));
