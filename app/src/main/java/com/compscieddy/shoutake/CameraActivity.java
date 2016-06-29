@@ -51,7 +51,6 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -94,11 +93,11 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
   public static final int CAMERA_PERMISSIONS_REQUEST = BASE_REQUEST_CODE + 1;
   public static final int RECORD_AUDIO_PERMISSIONS_REQUEST = BASE_REQUEST_CODE + 2;
 
-  @Bind(R.id.start_camera_button) Button mStartCameraButton;
-  @Bind(R.id.stop_camera_button) Button mStopCameraButton;
-  @Bind(R.id.capture_camera_button) Button mCaptureCameraButton;
-  @Bind(R.id.start_speech_button) Button mStartSpeechButton;
-  @Bind(R.id.stop_speech_button) Button mStopSpeechButton;
+  @Bind(R.id.start_camera_button) View mStartCameraButton;
+  @Bind(R.id.stop_camera_button) View mStopCameraButton;
+  @Bind(R.id.capture_camera_button) View mCaptureCameraButton;
+  @Bind(R.id.start_speech_button) View mStartSpeechButton;
+  @Bind(R.id.stop_speech_button) View mStopSpeechButton;
   @Bind(R.id.display_text1) TextView mDisplayText1;
   @Bind(R.id.display_text2) TextView mDisplayText2;
   @Bind(R.id.texture) AutoFitTextureView mTextureView;
@@ -106,9 +105,7 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
   SpeechRecognizer mSpeechRecognizer;
   AudioManager mAudioManager;
   private CaptureRequest mCamera2CaptureRequest;
-
   private CameraCaptureSession.CaptureCallback mCapture2Callback;
-
   private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
 
   static {
@@ -117,6 +114,8 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
     ORIENTATIONS.append(Surface.ROTATION_180, 270);
     ORIENTATIONS.append(Surface.ROTATION_270, 180);
   }
+
+  private boolean mIsFrontCamera = true;
 
   /**
    * An additional thread for running tasks that shouldn't block the UI.
@@ -538,8 +537,14 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
 
         // We don't use a front facing camera in this sample.
         Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
-        if (facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT) {
-          continue;
+        if (mIsFrontCamera) {
+          if (facing != null && facing == CameraCharacteristics.LENS_FACING_BACK) {
+            continue;
+          }
+        } else {
+          if (facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT) {
+            continue;
+          }
         }
 
         StreamConfigurationMap map = characteristics.get(
@@ -694,8 +699,7 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
       Surface surface = new Surface(texture);
 
       // We set up a CaptureRequest.Builder with the output Surface.
-      mCamera2CaptureRequestBuilder
-          = mCamera2Device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+      mCamera2CaptureRequestBuilder = mCamera2Device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
       mCamera2CaptureRequestBuilder.addTarget(surface);
 
       // Here, we create a CameraCaptureSession for camera preview.

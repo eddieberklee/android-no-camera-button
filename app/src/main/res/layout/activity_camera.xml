@@ -18,15 +18,19 @@
         android:layout_height="wrap_content"
         android:layout_toLeftOf="@+id/capture_camera_button"
         android:layout_alignTop="@+id/texture"
-        android:text="Start"/>
+        android:text="Start"
+        android:visibility="gone"/>
 
-    <Button
+    <ImageView
         android:id="@+id/capture_camera_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignTop="@+id/texture"
-        android:layout_toLeftOf="@+id/stop_camera_button"
-        android:text="Capture"/>
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:padding="10dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentRight="true"
+        android:layout_margin="10dp"
+        android:background="@drawable/outline_oval_white"
+        android:src="@drawable/ic_camera_white_48dp"/>
 
     <Button
         android:id="@+id/stop_camera_button"
@@ -34,13 +38,14 @@
         android:layout_height="wrap_content"
         android:layout_alignTop="@+id/texture"
         android:layout_alignRight="@+id/texture"
-        android:text="Stop"/>
+        android:text="Stop"
+        android:visibility="gone"/>
 
     <com.compscieddy.shoutake.FontTextView
         android:id="@+id/display_text1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="50dp"
+        android:layout_marginTop="10dp"
         android:layout_marginLeft="10dp"
         android:layout_alignParentTop="true"
         android:textColor="@color/white_transp_30"
