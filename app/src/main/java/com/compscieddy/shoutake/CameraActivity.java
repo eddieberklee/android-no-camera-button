@@ -11,6 +11,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
@@ -40,6 +41,7 @@ import android.speech.SpeechRecognizer;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.view.animation.FastOutSlowInInterpolator;
 import android.support.v7.app.ActionBarActivity;
 import android.text.TextUtils;
 import android.util.Size;
@@ -52,19 +54,26 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.compscieddy.eddie_utils.Etils;
+import com.facebook.rebound.SimpleSpringListener;
+import com.facebook.rebound.Spring;
+import com.facebook.rebound.SpringConfig;
+import com.facebook.rebound.SpringSystem;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -102,7 +111,10 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
   @Bind(R.id.display_text1) TextView mDisplayText1;
   @Bind(R.id.display_text2) TextView mDisplayText2;
   @Bind(R.id.texture) AutoFitTextureView mTextureView;
+  @Bind(R.id.flash_capture_animation) View mFlashCaptureAnimationView;
+  @Bind(R.id.preview_capture) ImageView mPreviewCapture;
 
+  private static final FastOutSlowInInterpolator FAST_OUT_SLOW_IN_INTERPOLATOR = new FastOutSlowInInterpolator();
   SpeechRecognizer mSpeechRecognizer;
   AudioManager mAudioManager;
   private CaptureRequest mCamera2CaptureRequest;
@@ -198,6 +210,8 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
   private ViewGroup mRootView;
   private LayoutInflater mLayoutInflater;
   private Handler mHandler;
+  private SpringSystem mSpringSystem;
+  private Spring mFlashCaptureSpring;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -208,8 +222,6 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
     setContentView(mRootView);
     ButterKnife.bind(this);
 
-    mFile = new File(getExternalFilesDir(null), "pic.jpg");
-
     if (Build.VERSION.SDK_INT >= CAMERA_2_API_LIMIT) {
       initOnImageAvailableListener();
       initCaptureCallback();
@@ -218,7 +230,64 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
     checkPermissions();
     setListeners();
     initCamera2();
+    initReboundSpring();
 
+  }
+
+  int[] captureColors = new int[] {
+      R.color.flatui_red_1,
+      R.color.flatui_orange_1,
+      R.color.flatui_yellow_2,
+      R.color.flatui_yellow_1,
+      R.color.flatui_green_1,
+      R.color.flatui_teal_1,
+      R.color.flatui_teal_2,
+      R.color.flatui_blue_1,
+  };
+
+  private void initReboundSpring() {
+    mSpringSystem = SpringSystem.create();
+    mFlashCaptureSpring = mSpringSystem.createSpring();
+    mFlashCaptureSpring.setSpringConfig(new SpringConfig(40, 10));
+    mFlashCaptureSpring.setOvershootClampingEnabled(false);
+    mFlashCaptureSpring.addListener(new SimpleSpringListener() {
+      @Override
+      public void onSpringUpdate(Spring spring) {
+        float value = (float) spring.getCurrentValue();
+        spring.getCurrentDisplacementDistance();
+        spring.getEndValue();
+        float springProgress = (float) ((1 - spring.getCurrentDisplacementDistance()) / spring.getEndValue());
+        float colorValue = value * (captureColors.length - 1);
+        float alphaValue = Etils.mapValue(value, 0, 1f, 0, 0.7f);
+        int colorIndex = (int) colorValue;
+        lawg.d("[" + colorIndex + "] value: " + value + " springProgress: " + springProgress + " colorValue: " + colorValue);
+        if (colorIndex > captureColors.length - 2) {
+          colorIndex = captureColors.length - 2;
+        }
+        float colorProgress = colorValue - colorIndex;
+        if (false) lawg.d("colorProgress: " + colorProgress + " colorIndex: " + colorIndex);
+        int intermediateColor = Etils.getIntermediateColor(
+            getResources().getColor(captureColors[colorIndex]),
+            getResources().getColor(captureColors[colorIndex + 1]),
+            colorProgress);
+        mFlashCaptureAnimationView.setBackgroundColor(intermediateColor);
+        mFlashCaptureAnimationView.setAlpha(alphaValue);
+      }
+      @Override
+      public void onSpringAtRest(Spring spring) {
+        if (false) lawg.d("onSpringAtRest");
+        mFlashCaptureAnimationView.setAlpha(0);
+        mFlashCaptureAnimationView.setVisibility(View.GONE);
+      }
+      @Override
+      public void onSpringActivate(Spring spring) {
+        if (false) lawg.d("onSpringActivate");
+      }
+      @Override
+      public void onSpringEndStateChange(Spring spring) {
+        if (false) lawg.d("onSpringEndStateChange");
+      }
+    });
   }
 
   @TargetApi(CAMERA_2_API_LIMIT)
@@ -754,6 +823,43 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
       if (activity == null || mCamera2Device == null) {
         return;
       }
+
+      mFlashCaptureAnimationView.setVisibility(View.VISIBLE);
+      mFlashCaptureSpring.setCurrentValue(0);
+      mFlashCaptureSpring.setEndValue(1.0f);
+
+      mTextureView.setDrawingCacheEnabled(true);
+      Bitmap cameraPreview = mTextureView.getBitmap();
+      if (cameraPreview == null) {
+        Etils.showToast(CameraActivity.this, "Camera preview bitmap null");
+      }
+      mPreviewCapture.setImageBitmap(cameraPreview);
+      mPreviewCapture.animate()
+          .alpha(1.0f)
+          .setInterpolator(FAST_OUT_SLOW_IN_INTERPOLATOR)
+          .setDuration(1500)
+          .withEndAction(new Runnable() {
+            @Override
+            public void run() {
+              mPreviewCapture.animate()
+                  .alpha(0.0f)
+                  .setInterpolator(FAST_OUT_SLOW_IN_INTERPOLATOR)
+                  .scaleX(0.3f)
+                  .scaleY(0.3f)
+                  .translationX(Etils.dpToPx(300))
+                  .translationY(Etils.dpToPx(500))
+                  .withEndAction(new Runnable() {
+                    @Override
+                    public void run() {
+                      mPreviewCapture.setScaleX(1.0f);
+                      mPreviewCapture.setScaleY(1.0f);
+                      mPreviewCapture.setTranslationX(1.0f);
+                      mPreviewCapture.setTranslationY(1.0f);
+                    }
+                  });
+            }
+          });
+
       // This is the CaptureRequest.Builder that we use to take a picture.
       final CaptureRequest.Builder captureBuilder =
           mCamera2Device.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
@@ -768,6 +874,10 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
       int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
       captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(rotation));
 
+      Date date = new Date();
+      SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH.mm.ss");
+      String timestampFilename = dateFormat.format(date);
+      mFile = new File(getExternalFilesDir(null), timestampFilename + ".jpg");
       CameraCaptureSession.CaptureCallback CaptureCallback
           = new CameraCaptureSession.CaptureCallback() {
 
@@ -775,8 +885,7 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
         public void onCaptureCompleted(@NonNull CameraCaptureSession session,
                                        @NonNull CaptureRequest request,
                                        @NonNull TotalCaptureResult result) {
-          Etils.showToast(CameraActivity.this, "Saved: " + mFile);
-          lawg.d(mFile.toString());
+          lawg.d("Saved file: " + mFile.toString());
           unlockFocus();
         }
       };
@@ -967,7 +1076,6 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
 
     @Override
     public void onPartialResults(Bundle partialResults) {
-      lawg.d("onPartialResults()");
       ArrayList<String> resultsArray = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
       StringBuilder sb = new StringBuilder();
       for (int i = 0; i < resultsArray.size(); i++) {
@@ -978,7 +1086,9 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
           captureStillPicture();
         }
       }
-      lawg.d("Words detected: \n" + sb.toString());
+      if (sb.length() > 0) {
+        lawg.d("onPartialResults() Words detected: \n" + sb.toString());
+      }
     }
 
     @Override
@@ -1005,9 +1115,9 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
     mSpeechRecognizer.setRecognitionListener(mRecognitionListener);
     Intent recognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
     recognizerIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-    recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1000 * 5);
-    recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1000 * 5);
-    recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000 * 5);
+//    recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1000 * 2);
+//    recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1000 * 2);
+//    recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000 * 2);
     mSpeechRecognizer.startListening(recognizerIntent);
   }
 

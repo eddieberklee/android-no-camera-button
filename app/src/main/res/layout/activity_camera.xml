@@ -9,8 +9,14 @@
         android:id="@+id/texture"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_centerInParent="true"
         android:layout_alignParentTop="true"
         android:layout_alignParentBottom="true"/>
+
+    <ImageView
+        android:id="@+id/preview_capture"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
 
     <Button
         android:id="@+id/start_camera_button"
@@ -78,6 +84,9 @@
         android:text="Speech End"
         android:visibility="gone"/>
 
-
+    <View
+        android:id="@+id/flash_capture_animation"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
 
 </RelativeLayout>
