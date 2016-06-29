@@ -36,6 +36,7 @@
         android:layout_alignParentRight="true"
         android:layout_margin="10dp"
         android:background="@drawable/outline_oval_white"
+        android:alpha="0.3"
         android:src="@drawable/ic_camera_white_48dp"/>
 
     <Button
