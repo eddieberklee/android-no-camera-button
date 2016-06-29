@@ -1031,7 +1031,7 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
       @Override
       public void run() {
         final View wordView = mLayoutInflater.inflate(R.layout.view_word, mRootView, false);
-        int randomColor = Etils.getRandomNumberInRange(0, randomColors.length);
+        int randomColor = Etils.getRandomNumberInRange(0, randomColors.length - 1);
         Etils.applyColorFilter(wordView.getBackground(), getResources().getColor(randomColors[randomColor]), true);
         TextView wordTextView = ButterKnife.findById(wordView, R.id.word);
         wordTextView.setText(word);
