@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
@@ -35,6 +36,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.provider.MediaStore;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -102,6 +104,7 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
   public static final int BASE_REQUEST_CODE = 100;
   public static final int CAMERA_PERMISSIONS_REQUEST = BASE_REQUEST_CODE + 1;
   public static final int RECORD_AUDIO_PERMISSIONS_REQUEST = BASE_REQUEST_CODE + 2;
+  public static final int WRITE_EXTERNAL_STORAGE_PERMISSIONS_REQUEST = BASE_REQUEST_CODE + 3;
 
   @Bind(R.id.start_camera_button) View mStartCameraButton;
   @Bind(R.id.stop_camera_button) View mStopCameraButton;
@@ -295,16 +298,16 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
     mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
       @Override
       public void onImageAvailable(ImageReader reader) {
-        mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile));
+        lawg.d("onImageAvailable()");
+        mBackgroundHandler.post(new ImageSaver(CameraActivity.this, reader.acquireNextImage(), mFile));
       }
     };
   }
 
   @TargetApi(CAMERA_2_API_LIMIT)
   private void initCaptureCallback() {
-
+    lawg.d("initCaptureCallback()");
     mCapture2Callback = new CameraCaptureSession.CaptureCallback() {
-
       private void process(CaptureResult result) {
         switch (mState) {
           case STATE_PREVIEW: {
@@ -543,12 +546,20 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
           CameraActivity.this,
           new String[] { Manifest.permission.CAMERA },
           CAMERA_PERMISSIONS_REQUEST);
-    } if (!hasPermission(Manifest.permission.RECORD_AUDIO)) {
+    }
+    if (!hasPermission(Manifest.permission.RECORD_AUDIO)) {
       lawg.d("No record audio permissions granted, requesting now -");
       ActivityCompat.requestPermissions(
           CameraActivity.this,
           new String[] { Manifest.permission.RECORD_AUDIO },
           RECORD_AUDIO_PERMISSIONS_REQUEST);
+    }
+    if (!hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+      lawg.d("No write external files permissions granted, requesting now -");
+      ActivityCompat.requestPermissions(
+          CameraActivity.this,
+          new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE },
+          WRITE_EXTERNAL_STORAGE_PERMISSIONS_REQUEST);
     }
   }
 
@@ -876,11 +887,9 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
 
       Date date = new Date();
       SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH.mm.ss");
-      String timestampFilename = dateFormat.format(date);
+      final String timestampFilename = dateFormat.format(date);
       mFile = new File(getExternalFilesDir(null), timestampFilename + ".jpg");
-      CameraCaptureSession.CaptureCallback CaptureCallback
-          = new CameraCaptureSession.CaptureCallback() {
-
+      CameraCaptureSession.CaptureCallback CaptureCallback = new CameraCaptureSession.CaptureCallback() {
         @Override
         public void onCaptureCompleted(@NonNull CameraCaptureSession session,
                                        @NonNull CaptureRequest request,
@@ -892,6 +901,7 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
 
       mCamera2CaptureSession.stopRepeating();
       mCamera2CaptureSession.capture(captureBuilder.build(), CaptureCallback, mBackgroundHandler);
+
     } catch (CameraAccessException e) {
       e.printStackTrace();
     }
@@ -1283,8 +1293,10 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
      * The file we save the image into.
      */
     private final File mFile;
+    private Activity mActivity;
 
-    public ImageSaver(Image image, File file) {
+    public ImageSaver(Activity activity, Image image, File file) {
+      mActivity = activity;
       mImage = image;
       mFile = file;
     }
@@ -1299,6 +1311,15 @@ public class CameraActivity extends ActionBarActivity implements ActivityCompat.
       try {
         output = new FileOutputStream(mFile);
         output.write(bytes);
+
+        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        Date date = new Date();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH.mm.ss");
+        final String timestampFilename = dateFormat.format(date);
+        // http://stackoverflow.com/a/8722494/4326052
+        String imagePath = new File(mActivity.getExternalFilesDir(null), timestampFilename + ".jpg").getAbsolutePath();
+        MediaStore.Images.Media.insertImage(mActivity.getContentResolver(), bitmap, timestampFilename, "Picture taken by shoutake");
+
       } catch (IOException e) {
         e.printStackTrace();
       } finally {
